@@ -5,7 +5,46 @@ const Product = require("../models/Product");
 // GET all products
 router.get("/", async (req, res) => {
   try {
-    const products = await Product.find();
+    // Build query object dynamically
+    const query = {};
+
+    // Filter by category
+    if (req.query.category) {
+      query.category = req.query.category;
+    }
+
+    // Filter by price range
+    if (req.query.minPrice || req.query.maxPrice) {
+      query.price = {};
+      if (req.query.minPrice) {
+        query.price.$gte = parseFloat(req.query.minPrice);
+      }
+      if (req.query.maxPrice) {
+        query.price.$lte = parseFloat(req.query.maxPrice);
+      }
+    }
+
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Sorting
+    let sort = {};
+    if (req.query.sortBy) {
+      if (req.query.sortBy === "price_asc") {
+        sort.price = 1;
+      } else if (req.query.sortBy === "price_desc") {
+        sort.price = -1;
+      }
+    }
+
+    // Execute query
+    const products = await Product.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
+
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });
